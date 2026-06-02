@@ -1,0 +1,29 @@
+# Rust 构建产物
+/target
+
+# 备份文件
+*.rs.bk
+*.rlib
+
+# 性能分析
+*.prof*
+
+# IDE
+.idea/
+.vscode/
+
+# 编辑器与临时文件
+*.tmp
+*.swp
+*~
+
+# 日志与环境
+*.log
+.env*
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 注意：本项目为二进制程序，Cargo.lock 必须入库以保证可复现构建（宪法原则 II），故不在此忽略。
+

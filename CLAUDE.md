@@ -1,4 +1,6 @@
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
+当前开发计划：`specs/001-text-replace-tool/plan.md`
+
+技术栈、项目结构、依赖、shell 命令及其他重要信息请阅读该计划文件及其同目录下的
+research.md（技术决策）、data-model.md（数据模型）、contracts/（CLI 契约）、quickstart.md（使用示例）。
 <!-- SPECKIT END -->

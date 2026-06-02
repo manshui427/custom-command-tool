@@ -1,50 +1,115 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+========================= 同步影响报告 (Sync Impact Report) =========================
+版本变更: 模板 (TEMPLATE) → 1.0.0
+变更类型: 初始批准 (MAJOR - 首次将模板具体化为正式章程)
 
-## Core Principles
+修订的原则 (本次为首次定义):
+  - I.   子命令优先的 CLI 架构
+  - II.  主流最佳实践与官方推荐写法
+  - III. 清晰注释与中文文档
+  - IV.  拒绝过度抽象与面条代码
+  - V.   编译驱动的迭代优化
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+新增章节:
+  - 技术栈约束
+  - 开发工作流
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+移除章节: 无
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+模板同步状态:
+  - .specify/templates/plan-template.md ........ ✅ 一致 (Constitution Check 为通用占位, 无需修改)
+  - .specify/templates/spec-template.md ........ ✅ 一致 (无与本章程冲突的约束)
+  - .specify/templates/tasks-template.md ....... ✅ 一致 (测试为可选, 符合本项目无强制 TDD 的定位)
+  - .specify/templates/checklist-template.md ... ✅ 一致 (无需修改)
+  - .specify/templates/commands/*.md ........... ⚠ 不存在该目录, 无需处理
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+待办事项 (TODO): 无 (批准日期采用当前日期 2026-06-01)
+====================================================================================
+-->
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+# 自定义命令行工具（custom-command-tool）项目章程
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+本章程是 `custom-command-tool` 项目（中文名：自定义命令行工具）的最高开发准则。项目目标为：
+使用 Rust 构建一个可执行文件，通过子命令（subcommand）快速完成各种自定义命令。
+所有规划、设计、实现与评审活动均须遵循以下原则。
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+## 核心原则
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+### I. 子命令优先的 CLI 架构
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- 项目交付物**必须**是单一的 Rust 可执行文件，所有功能通过子命令对外暴露。
+- 每个子命令**必须**职责单一、可独立运行、可独立测试，并附带清晰的帮助信息（`--help`）。
+- 命令行接口**应当**遵循标准约定：参数与 `stdin` 为输入，正常结果输出至 `stdout`，
+  错误信息输出至 `stderr`，并返回符合约定的退出码（成功为 0，失败为非 0）。
+- 新增功能**应当**优先以"新增一个子命令"的方式实现，而非膨胀已有命令。
 
-## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+**理由**: 项目定位为可扩展的命令工具集，子命令边界清晰是保证长期可维护与可扩展的前提。
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+### II. 主流最佳实践与官方推荐写法
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+- 所有代码**必须**符合 Rust 社区主流最佳实践，**优先**采用官方推荐的写法与惯用法（idiom）。
+- **必须**使用官方工具链：以 `cargo` 进行构建与依赖管理，以 `rustfmt` 统一格式，
+  以 `clippy` 进行静态检查；提交前 `cargo fmt` 与 `cargo clippy` **必须**无警告（或对保留警告给出书面理由）。
+- **禁止**无理由使用 `unsafe`；确需使用时**必须**在注释中说明安全性约束与理由。
+- 依赖库**应当**选用社区广泛采用、维护活跃的官方或主流 crate（如命令行解析优先考虑 `clap`）。
+
+**理由**: 遵循官方惯用法可降低维护成本、便于他人协作，并最大程度复用社区生态的可靠性。
+
+### III. 清晰注释与中文文档
+
+- 所有代码**必须**具备清晰注释：对外的函数、子命令、模块**必须**有文档注释（`///`），
+  说明用途、参数、返回值与可能的错误。
+- 所有文档、注释与项目内说明性文字**必须**使用中文。
+- 与用户的所有交流回复**必须**使用中文。
+- 注释**应当**解释"为什么"（设计意图、约束、非显而易见的权衡），而非复述"做了什么"。
+
+**理由**: 团队以中文为工作语言，统一语言与清晰注释能显著降低理解与维护门槛。
+
+### IV. 拒绝过度抽象与面条代码
+
+- **禁止**过度抽象：不得为假想的未来需求引入多余的 trait、泛型层级或间接层；遵循 YAGNI 原则。
+- **禁止**一次性生成不可维护的"面条代码"（职责混杂、超长函数、缺乏分层的代码）。
+- 代码**应当**保持简单直接：优先选择能解决当前问题的最简方案；重复三次以上的逻辑再考虑抽象。
+- 单个函数**应当**职责单一、长度可控；模块划分**应当**与子命令边界保持一致。
+
+**理由**: 简单、直接、可读的代码才是可长期维护的代码；过早抽象与面条代码同样会摧毁可维护性。
+
+### V. 编译驱动的迭代优化
+
+- **允许并鼓励**在工作空间内自动执行 `cargo build`、`cargo test` 等命令进行编译打包，
+  并依据编译器与测试返回的内容进一步调整与优化代码。
+- 任何变更在交付前，`cargo build` **必须**通过；存在测试时 `cargo test` **必须**通过。
+- **应当**将编译器警告、`clippy` 建议视为待修复项，依据其反馈迭代直至干净通过。
+
+**理由**: 编译器与工具链反馈是 Rust 最可靠的质量信号，以其驱动迭代可快速收敛到正确、健壮的实现。
+
+## 技术栈约束
+
+- **编程语言**: Rust（使用稳定版工具链 stable，除非有明确理由）。
+- **构建与依赖**: 统一使用 `cargo`；依赖声明集中于 `Cargo.toml`，并提交 `Cargo.lock`。
+- **项目结构**: 遵循 Cargo 标准布局（`src/main.rs` 作为入口，子命令按模块拆分于 `src/` 下）。
+- **质量工具**: `rustfmt`（格式化）、`clippy`（静态检查）为必备工具，纳入日常开发流程。
+- **跨平台**: 当前主要目标平台为 Windows；编写代码时**应当**注意路径、换行等平台差异，避免硬编码平台相关假设。
+
+## 开发工作流
+
+- **规划与评审**: 通过 Spec Kit 流程（specify → plan → tasks → implement）推进；
+  每个阶段产出的文档**必须**符合本章程，尤其是核心原则 I–V。
+- **质量门禁**: 提交或合并前**必须**满足：`cargo build` 通过、`cargo fmt` 已格式化、
+  `cargo clippy` 无未说明的警告、（若有测试）`cargo test` 通过。
+- **代码评审**: 评审**必须**核对是否符合核心原则；对违反"拒绝过度抽象"或"清晰注释"的代码应要求修改。
+- **复杂度管理**: 任何偏离"简单优先"的设计**必须**在对应 plan 的复杂度跟踪表中书面说明理由及被否决的更简方案。
+
+## 治理
+
+- 本章程的效力**高于**其他一切开发约定；当其他文档与本章程冲突时，以本章程为准。
+- **修订程序**: 任何修订**必须**以书面形式提出，说明动机与影响，经项目负责人批准后方可生效，
+  并同步更新所有受影响的模板与文档。
+- **版本策略**: 章程版本遵循语义化版本（SemVer）：
+  - **MAJOR**: 不兼容的治理变更，或原则的移除/重新定义。
+  - **MINOR**: 新增原则/章节，或对既有指导的实质性扩充。
+  - **PATCH**: 措辞澄清、错别字修正等非语义性细节调整。
+- **合规审查**: 所有变更（含 PR 与评审）**必须**核验是否符合本章程；不符合者不得合并。
+- **运行时指导**: 日常开发的具体技术上下文（技术栈、结构、命令等）以当前 plan 文档为准，详见 `CLAUDE.md` 指引。
+
+**Version**: 1.0.0 | **Ratified**: 2026-06-01 | **Last Amended**: 2026-06-01

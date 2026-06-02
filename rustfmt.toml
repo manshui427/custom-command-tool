@@ -1,0 +1,3 @@
+# rustfmt 配置：采用官方默认风格
+edition = "2024"
+max_width = 100
