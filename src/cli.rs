@@ -13,7 +13,7 @@ use crate::commands::trt::args::TrtArgs;
 #[derive(Debug, Parser)]
 #[command(
     name = "cct",
-    about = "custom-command-tool：通过子命令快速完成各种自定义命令",
+    about = "自定义工具：通过子命令快速完成各种自定义命令",
     version,
     // 不带子命令时不自动报错，由 main.rs 输出子命令清单（等同 -ls）。
     arg_required_else_help = false,
@@ -35,4 +35,8 @@ pub enum Commands {
     /// 文本替换工具（别名 trt）。
     #[command(name = "text-replace-tool", alias = "trt")]
     Trt(TrtArgs),
+
+    /// 图形操作界面：打开桌面窗口，以表单填写参数并点击执行（替代命令行）。
+    #[command(name = "gui")]
+    Gui,
 }

@@ -16,11 +16,18 @@ pub struct SubcommandInfo {
 }
 
 /// 全部已注册子命令。名称与别名在表内唯一。
-pub const SUBCOMMANDS: &[SubcommandInfo] = &[SubcommandInfo {
-    name: "text-replace-tool",
-    alias: "trt",
-    description: "文本替换工具",
-}];
+pub const SUBCOMMANDS: &[SubcommandInfo] = &[
+    SubcommandInfo {
+        name: "text-replace-tool",
+        alias: "trt",
+        description: "文本替换",
+    },
+    SubcommandInfo {
+        name: "gui",
+        alias: "gui",
+        description: "图形操作界面",
+    },
+];
 
 /// 将子命令清单格式化为可读文本（供 `-ls` 与无子命令时输出）。
 ///
@@ -28,14 +35,20 @@ pub const SUBCOMMANDS: &[SubcommandInfo] = &[SubcommandInfo {
 /// ```text
 /// 可用子命令：
 ///   trt (text-replace-tool)  文本替换工具
+///   gui                      图形操作界面
 /// ```
 pub fn format_subcommand_list() -> String {
     let mut out = String::from("可用子命令：\n");
     for sc in SUBCOMMANDS {
-        out.push_str(&format!(
-            "  {} ({})  {}\n",
-            sc.alias, sc.name, sc.description
-        ));
+        if sc.alias == sc.name {
+            // 别名与全名相同时只显示一个，避免冗余。
+            out.push_str(&format!("  {}  {}\n", sc.alias, sc.description));
+        } else {
+            out.push_str(&format!(
+                "  {} ({})  {}\n",
+                sc.alias, sc.name, sc.description
+            ));
+        }
     }
     out
 }

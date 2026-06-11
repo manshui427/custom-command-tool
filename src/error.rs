@@ -58,6 +58,10 @@ pub enum CctError {
     #[error("备份操作失败：{0}")]
     Backup(String),
 
+    /// 图形界面相关错误（无图形环境、窗口初始化失败、未启用 gui 特性等）。
+    #[error("{0}")]
+    Gui(String),
+
     /// 通用 IO 错误。
     #[error("IO 错误：{0}")]
     Io(#[from] std::io::Error),
