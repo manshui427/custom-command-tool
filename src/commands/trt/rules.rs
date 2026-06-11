@@ -2,7 +2,7 @@
 //!
 //! 对应 spec 的 FR-007a/FR-007b 与 data-model.md 实体 2/3：
 //! - 单条规则由命令行 `-o/-n` 给出；
-//! - 多条规则由 `--rules` 文件给出（每行一组，旧/新以制表符分隔，`#` 注释行与空行忽略）；
+//! - 多条规则由 `--rules` 文件给出（每行一组，旧/新以 `:$#split#$:` 分隔，`#` 注释行与空行忽略）；
 //! - 同时提供时，命令行单组规则**追加**到规则集末尾。
 //!
 //! 规则在集合中的顺序（`order`）决定重叠命中时的优先级（小者优先，见 FR-008a）。
@@ -12,8 +12,8 @@ use std::path::Path;
 
 use crate::error::{CctError, CctResult};
 
-/// 规则文件中分隔旧/新文本的字符（制表符）。
-const RULE_SEPARATOR: char = '\t';
+/// 规则文件中分隔旧/新文本的字符串。
+const RULE_SEPARATOR: &str = ":$#split#$:";
 
 /// 单条替换规则（参见 data-model.md 实体 2）。
 #[derive(Debug, Clone)]
@@ -85,7 +85,7 @@ impl RuleSet {
 
 /// 解析规则文件，返回有序规则列表。
 ///
-/// 每行格式：`<旧文本><制表符><新文本>`。空行与以 `#` 起始的行被忽略。
+/// 每行格式：`<旧文本>:$#split#$:<新文本>`。空行与以 `#` 起始的行被忽略。
 /// 缺少分隔符的行被视为非法（返回 [`CctError::InvalidRuleLine`]）。
 fn parse_rules_file(path: &Path) -> CctResult<Vec<ReplacementRule>> {
     let content = fs::read_to_string(path).map_err(|source| CctError::RulesFileUnreadable {
@@ -102,7 +102,7 @@ fn parse_rules_file(path: &Path) -> CctResult<Vec<ReplacementRule>> {
             continue;
         }
 
-        // 按首个制表符分割旧/新文本。
+        // 按首个分隔符分割旧/新文本。
         match line.split_once(RULE_SEPARATOR) {
             Some((old, new)) if !old.is_empty() => {
                 rules.push(ReplacementRule {

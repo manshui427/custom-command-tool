@@ -22,11 +22,6 @@ pub const SUBCOMMANDS: &[SubcommandInfo] = &[
         alias: "trt",
         description: "文本替换",
     },
-    SubcommandInfo {
-        name: "gui",
-        alias: "gui",
-        description: "图形操作界面",
-    },
 ];
 
 /// 将子命令清单格式化为可读文本（供 `-ls` 与无子命令时输出）。
@@ -35,7 +30,6 @@ pub const SUBCOMMANDS: &[SubcommandInfo] = &[
 /// ```text
 /// 可用子命令：
 ///   trt (text-replace-tool)  文本替换工具
-///   gui                      图形操作界面
 /// ```
 pub fn format_subcommand_list() -> String {
     let mut out = String::from("可用子命令：\n");

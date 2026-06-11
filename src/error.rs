@@ -34,7 +34,7 @@ pub enum CctError {
     },
 
     /// 规则文件中某行格式非法（缺少分隔符）。
-    #[error("规则文件第 {line} 行格式非法（缺少制表符分隔符）：{content}")]
+    #[error("规则文件第 {line} 行格式非法（缺少分隔符 :$#split#$:）：{content}")]
     InvalidRuleLine {
         /// 出错的行号（从 1 开始）。
         line: usize,
@@ -58,7 +58,8 @@ pub enum CctError {
     #[error("备份操作失败：{0}")]
     Backup(String),
 
-    /// 图形界面相关错误（无图形环境、窗口初始化失败、未启用 gui 特性等）。
+    /// 图形界面相关错误（无图形环境、窗口初始化失败等）。
+    #[cfg(feature = "gui")]
     #[error("{0}")]
     Gui(String),
 

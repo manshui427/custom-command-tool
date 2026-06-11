@@ -25,7 +25,7 @@ const TAB_INACTIVE_BG: egui::Color32 = egui::Color32::from_rgb(30, 35, 45);
 
 /// GUI 中可选的子命令面板。
 ///
-/// 从注册表动态获取，排除 gui 自身（避免在 GUI 内再开 GUI）。
+/// 从注册表动态获取。
 /// 新增子命令只需在 registry 中注册并在此枚举中加一项+对应渲染。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ActiveTab {
@@ -35,11 +35,10 @@ enum ActiveTab {
     Placeholder { alias: &'static str, description: &'static str },
 }
 
-/// 构建标签列表：从注册表读取，排除 gui。
+/// 构建标签列表：从注册表读取。
 fn build_tabs() -> Vec<ActiveTab> {
     registry::SUBCOMMANDS
         .iter()
-        .filter(|sc| sc.alias != "gui")
         .map(|sc| {
             if sc.alias == "trt" {
                 ActiveTab::Trt
@@ -232,7 +231,7 @@ impl CctApp {
                         ui.add(
                             egui::TextEdit::singleline(&mut self.form.rules_file)
                                 .desired_width(260.0)
-                                .hint_text("可选，制表符分隔的规则文件…"),
+                                .hint_text("可选，:$#split#$: 分隔的规则文件…"),
                         );
                         if ui.small_button("选择…").clicked()
                             && let Some(f) = rfd::FileDialog::new().pick_file()

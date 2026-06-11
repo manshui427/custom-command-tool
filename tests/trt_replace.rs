@@ -53,7 +53,7 @@ fn 多组规则单遍无级联() {
     // foo->bar, bar->X：foo 替换出的 bar 不应被再次替换为 X。
     let dir = setup_file("e.txt", "foo bar\n");
     let rules = dir.path().join("rules.tsv");
-    fs::write(&rules, "foo\tbar\nbar\tX\n").unwrap();
+    fs::write(&rules, "foo:$#split#$:bar\nbar:$#split#$:X\n").unwrap();
 
     Command::cargo_bin("cct")
         .unwrap()

@@ -5,7 +5,7 @@
 //! - `-h/--help` 由 clap 自动处理（FR-003）；
 //! - 匹配到子命令时分发到对应实现，并将错误映射为非零退出码（FR-022）。
 
-// 启用 gui 时以 Windows 子系统运行，双击 exe 或 cct gui 不弹出控制台黑窗。
+// 启用 gui 时以 Windows 子系统运行，双击 exe 不弹出控制台黑窗。
 // CLI 命令（如 cct trt）需要终端输出，通过 attach_console() 重新连接父终端。
 #![cfg_attr(all(feature = "gui", target_os = "windows"), windows_subsystem = "windows")]
 
@@ -59,10 +59,22 @@ fn main() -> ExitCode {
         }
         #[cfg(feature = "gui")]
         {
-            return match run_gui() {
-                Ok(()) => ExitCode::SUCCESS,
-                Err(e) => {
-                    eprintln!("错误：{e}");
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(run_gui));
+            return match result {
+                Ok(Ok(())) => ExitCode::SUCCESS,
+                Ok(Err(e)) => {
+                    report_error(&e);
+                    ExitCode::FAILURE
+                }
+                Err(panic) => {
+                    let msg = if let Some(s) = panic.downcast_ref::<String>() {
+                        s.clone()
+                    } else if let Some(s) = panic.downcast_ref::<&str>() {
+                        s.to_string()
+                    } else {
+                        "未知错误".to_string()
+                    };
+                    report_error(&format!("程序崩溃：{msg}"));
                     ExitCode::FAILURE
                 }
             };
@@ -82,7 +94,6 @@ fn main() -> ExitCode {
     // 分发到具体子命令。
     let result = match cli.command.unwrap() {
         Commands::Trt(args) => commands::trt::run(args),
-        Commands::Gui => run_gui(),
     };
 
     match result {
@@ -95,19 +106,43 @@ fn main() -> ExitCode {
     }
 }
 
-/// 启动图形界面子命令。
-///
-/// 启用 `gui` feature 时委托给 `commands::gui::run()`；未启用时返回明确错误，
-/// 以保证 CLI-only 构建下 `cct gui` 给出友好提示而非编译期缺失（FR-007）。
+/// 启动图形界面（仅在启用 `gui` feature 时可用）。
 #[cfg(feature = "gui")]
 fn run_gui() -> error::CctResult<()> {
     commands::gui::run()
 }
 
-/// CLI-only 构建下的 `cct gui`：提示本可执行文件未包含图形界面支持。
-#[cfg(not(feature = "gui"))]
-fn run_gui() -> error::CctResult<()> {
-    Err(error::CctError::Gui(
-        "本可执行文件未包含图形界面支持（请使用启用 gui 特性的构建）".to_string(),
-    ))
+/// Windows GUI 子系统下 stderr 不可见，通过 MessageBox 显示错误。
+#[cfg(all(feature = "gui", target_os = "windows"))]
+fn show_error(msg: &str) {
+    unsafe extern "system" {
+        fn MessageBoxW(
+            hwnd: *const std::ffi::c_void,
+            text: *const u16,
+            caption: *const u16,
+            r#type: u32,
+        ) -> i32;
+    }
+    const MB_OK: u32 = 0x00000000;
+    const MB_ICONERROR: u32 = 0x00000010;
+    let text: Vec<u16> = msg.encode_utf16().chain(std::iter::once(0)).collect();
+    let caption: Vec<u16> = "错误".encode_utf16().chain(std::iter::once(0)).collect();
+    unsafe {
+        MessageBoxW(
+            std::ptr::null(),
+            text.as_ptr(),
+            caption.as_ptr(),
+            MB_OK | MB_ICONERROR,
+        );
+    }
+}
+
+#[cfg(all(feature = "gui", target_os = "windows"))]
+fn report_error(e: &dyn std::fmt::Display) {
+    show_error(&format!("错误：{e}"));
+}
+
+#[cfg(not(all(feature = "gui", target_os = "windows")))]
+fn report_error(e: &dyn std::fmt::Display) {
+    eprintln!("错误：{e}");
 }

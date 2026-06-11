@@ -26,7 +26,7 @@ pub struct TrtArgs {
     #[arg(short = 'n', long = "new-text")]
     pub new_text: Option<String>,
 
-    /// 多组替换规则文件（每行一组，旧/新以制表符分隔，# 注释行与空行忽略）。
+    /// 多组替换规则文件（每行一组，旧/新以 `:$#split#$:` 分隔，# 注释行与空行忽略）。
     #[arg(long = "rules")]
     pub rules: Option<PathBuf>,
 

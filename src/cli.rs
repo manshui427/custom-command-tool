@@ -35,8 +35,4 @@ pub enum Commands {
     /// 文本替换工具（别名 trt）。
     #[command(name = "text-replace-tool", alias = "trt")]
     Trt(TrtArgs),
-
-    /// 图形操作界面：打开桌面窗口，以表单填写参数并点击执行（替代命令行）。
-    #[command(name = "gui")]
-    Gui,
 }
