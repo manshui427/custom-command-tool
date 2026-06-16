@@ -21,6 +21,8 @@ pub struct GuiFormState {
     pub new_text: String,
     /// 规则文件（--rules），空表示不使用。
     pub rules_file: String,
+    /// 查找模式（-s 1）：仅查找不替换。
+    pub search: bool,
     /// 启用备份（-b）。
     pub backup: bool,
     /// 撤销模式（-u）。
@@ -32,13 +34,14 @@ pub struct GuiFormState {
 }
 
 impl Default for GuiFormState {
-    /// 默认值与 trt 命令行默认一致：备份开、大小写敏感、字面、非撤销。
+    /// 默认值与 trt 命令行默认一致：备份开、大小写敏感、字面、非撤销、非查找。
     fn default() -> Self {
         Self {
             directory: String::new(),
             old_text: String::new(),
             new_text: String::new(),
             rules_file: String::new(),
+            search: false,
             backup: true,
             undo: false,
             case_sensitive: true,
@@ -63,6 +66,7 @@ impl GuiFormState {
             old_text: trimmed(&self.old_text),
             new_text: trimmed(&self.new_text),
             rules: trimmed(&self.rules_file).map(PathBuf::from),
+            search: u8::from(self.search),
             backup: u8::from(self.backup),
             undo: u8::from(self.undo),
             case_sensitive: u8::from(self.case_sensitive),
@@ -105,6 +109,7 @@ mod tests {
         assert!(f.case_sensitive, "默认大小写敏感");
         assert!(!f.use_regex, "默认字面匹配");
         assert!(!f.undo, "默认非撤销");
+        assert!(!f.search, "默认非查找");
     }
 
     #[test]

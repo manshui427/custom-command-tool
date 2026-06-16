@@ -18,23 +18,28 @@ pub struct TrtArgs {
     #[arg(short = 'd', long = "directory")]
     pub directory: PathBuf,
 
-    /// 要替换的文本（使用 -u 撤销时可选）。
+    /// 要替换或查找的文本（查找模式与撤销模式下仅需此参数）。
     #[arg(short = 'o', long = "old-text")]
     pub old_text: Option<String>,
 
-    /// 替换后的文本（使用 -u 撤销时可选）。
+    /// 替换后的文本（查找模式下不需要）。
     #[arg(short = 'n', long = "new-text")]
     pub new_text: Option<String>,
 
-    /// 多组替换规则文件（每行一组，旧/新以 `:$#split#$:` 分隔，# 注释行与空行忽略）。
+    /// 多组规则文件（每行一组，旧/新以 `:$#split#$:` 分隔，# 注释行与空行忽略）。
+    /// 查找模式下仅使用旧文本作为搜索模式。
     #[arg(long = "rules")]
     pub rules: Option<PathBuf>,
 
-    /// 启用备份（1=启用, 0=禁用）。
+    /// 查找模式：仅查找包含指定文本的文件，不执行替换（1=查找, 0=正常）。
+    #[arg(short = 's', long = "search", default_value_t = 0)]
+    pub search: u8,
+
+    /// 启用备份（1=启用, 0=禁用，查找模式下忽略）。
     #[arg(short = 'b', long = "backup", default_value_t = 1)]
     pub backup: u8,
 
-    /// 撤销模式：还原上一次操作并删除备份（1=撤销, 0=正常）。
+    /// 撤销模式：还原上一次操作并删除备份（1=撤销, 0=正常，与 -s 互斥）。
     #[arg(short = 'u', long = "undo", default_value_t = 0)]
     pub undo: u8,
 
@@ -54,10 +59,12 @@ pub struct TrtArgs {
 /// trt 的运行模式。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TrtMode {
-    /// 正常替换模式（-u 0，默认）。
+    /// 正常替换模式（默认）。
     Replace,
     /// 撤销模式（-u 1）。
     Undo,
+    /// 查找模式（-s 1）：仅查找包含指定文本的文件，不执行替换。
+    Search,
 }
 
 /// 归一化后的 trt 运行选项（参见 data-model.md 实体 4）。
@@ -67,13 +74,13 @@ pub struct TrtOptions {
     pub directory: PathBuf,
     /// 运行模式。
     pub mode: TrtMode,
-    /// 命令行单组规则（旧文本）；撤销模式下可为 None。
+    /// 命令行单组规则（旧文本）；撤销/查找模式下可为 None。
     pub old_text: Option<String>,
-    /// 命令行单组规则（新文本）。
+    /// 命令单组规则（新文本）；查找模式下可为 None。
     pub new_text: Option<String>,
     /// 规则文件路径。
     pub rules_file: Option<PathBuf>,
-    /// 是否启用备份。
+    /// 是否启用备份（查找模式下忽略）。
     pub backup_enabled: bool,
     /// 是否大小写敏感。
     pub case_sensitive: bool,
@@ -88,10 +95,18 @@ impl TrtArgs {
     ///
     /// 校验规则（见 FR-006/FR-007/FR-022 与 spec 边界）：
     /// - 目标目录必须存在且为目录；
-    /// - 非撤销模式下，`-o/-n` 与 `--rules` 必须至少提供其一；
+    /// - 撤销模式和查找模式互斥；
+    /// - 非撤销非查找模式下，`-o/-n` 与 `--rules` 必须至少提供其一；
+    /// - 查找模式下，`-o` 或 `--rules` 必须提供其一；
     /// - 提供了 `-o` 时其值不能为空字符串。
     pub fn into_options(self) -> CctResult<TrtOptions> {
-        let mode = if self.undo == 1 {
+        let mode = if self.undo == 1 && self.search == 1 {
+            return Err(CctError::MutuallyExclusiveFlags(
+                "-u（撤销）与 -s（查找）不能同时使用".into(),
+            ));
+        } else if self.search == 1 {
+            TrtMode::Search
+        } else if self.undo == 1 {
             TrtMode::Undo
         } else {
             TrtMode::Replace
@@ -109,7 +124,12 @@ impl TrtArgs {
             return Err(CctError::EmptyOldText);
         }
 
-        // 非撤销模式下必须有规则来源。
+        // 查找模式：必须有搜索文本来源。
+        if mode == TrtMode::Search && self.old_text.is_none() && self.rules.is_none() {
+            return Err(CctError::NoSearchText);
+        }
+
+        // 替换模式：必须有规则来源。
         if mode == TrtMode::Replace && self.old_text.is_none() && self.rules.is_none() {
             return Err(CctError::NoRulesProvided);
         }

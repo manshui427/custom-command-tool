@@ -4,7 +4,7 @@
 //! 即时模式：每帧根据 [`GuiExecState`] 重绘；执行中轮询后台通道推进状态。
 //! 标签栏从注册表读取可用子命令，当前仅 trt 有完整表单，其余显示占位提示。
 
-use crate::commands::trt::{ProgressUpdate, RunSummary};
+use crate::commands::trt::{ProgressUpdate, RunSummary, SearchResult};
 use crate::registry;
 
 use eframe::egui;
@@ -83,8 +83,10 @@ enum GuiExecState {
         progress: ProgressUpdate,
         handle: RunHandle,
     },
-    /// 完成：展示统计 + 被影响文件列表。
+    /// 替换/撤销完成：展示统计 + 被影响文件列表。
     Done(RunSummary),
+    /// 查找完成：展示命中文件列表。
+    SearchDone(SearchResult),
     /// 失败：展示错误信息。
     Failed(String),
 }
@@ -140,6 +142,10 @@ impl CctApp {
                     GuiMessage::Progress(u) => *progress = u,
                     GuiMessage::Finished(summary) => {
                         next = Some(GuiExecState::Done(summary));
+                        break;
+                    }
+                    GuiMessage::SearchFinished(result) => {
+                        next = Some(GuiExecState::SearchDone(result));
                         break;
                     }
                     GuiMessage::Error(e) => {
@@ -248,6 +254,7 @@ impl CctApp {
                         ui.checkbox(&mut self.form.case_sensitive, "大小写敏感");
                         ui.checkbox(&mut self.form.use_regex, "正则");
                         ui.checkbox(&mut self.form.undo, "撤销");
+                        ui.checkbox(&mut self.form.search, "查找");
                     });
                     ui.end_row();
                 });
@@ -336,6 +343,67 @@ impl CctApp {
                 }
             });
     }
+
+    fn ui_search_result(&self, ui: &mut egui::Ui, result: &SearchResult) {
+        if result.hits.is_empty() {
+            ui.label(
+                egui::RichText::new("未找到匹配文件。")
+                    .strong()
+                    .color(ORANGE),
+            );
+        } else {
+            ui.horizontal(|ui| {
+                ui.label(
+                    egui::RichText::new(format!("{}", result.hits.len()))
+                        .strong()
+                        .color(ACCENT),
+                );
+                ui.label(" 个文件命中，共 ");
+                ui.label(
+                    egui::RichText::new(format!("{}", result.total_matches))
+                        .strong()
+                        .color(ACCENT),
+                );
+                ui.label(" 处匹配");
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("扫描");
+                ui.label(egui::RichText::new(format!("{}", result.files_scanned)).color(ACCENT));
+                ui.label("，跳过二进制");
+                ui.label(
+                    egui::RichText::new(format!("{}", result.files_skipped_binary)).color(ACCENT),
+                );
+                ui.label("，失败");
+                ui.label(egui::RichText::new(format!("{}", result.files_failed)).color(ACCENT));
+            });
+
+            ui.separator();
+            ui.label(egui::RichText::new("命中文件：").strong());
+
+            const MAX_SHOWN: usize = 1000;
+            egui::ScrollArea::vertical()
+                .max_height(260.0)
+                .show(ui, |ui| {
+                    for hit in result.hits.iter().take(MAX_SHOWN) {
+                        ui.horizontal(|ui| {
+                            ui.label(egui::RichText::new("•").color(ACCENT));
+                            ui.label(hit.path.display().to_string());
+                            ui.label(
+                                egui::RichText::new(format!("{} 处匹配", hit.match_count))
+                                    .color(ACCENT),
+                            );
+                        });
+                    }
+                    if result.hits.len() > MAX_SHOWN {
+                        ui.label(format!(
+                            "… 其余 {} 项未显示",
+                            result.hits.len() - MAX_SHOWN
+                        ));
+                    }
+                });
+        }
+    }
 }
 
 // ── eframe App 实现 ───────────────────────────────────────────────────
@@ -375,9 +443,15 @@ impl eframe::App for CctApp {
         if self.active_tab == ActiveTab::Trt {
             let mut execute_clicked = false;
             match &self.state {
-                GuiExecState::Idle | GuiExecState::Done(_) | GuiExecState::Failed(_) => {
+                GuiExecState::Idle | GuiExecState::Done(_) | GuiExecState::SearchDone(_) | GuiExecState::Failed(_) => {
                     ui.vertical_centered(|ui| {
-                        let btn_text = if self.form.undo { "撤销" } else { "执行" };
+                        let btn_text = if self.form.undo {
+                            "撤销"
+                        } else if self.form.search {
+                            "查找"
+                        } else {
+                            "执行"
+                        };
                         let btn_color = if self.form.undo { ORANGE } else { ACCENT_FILL };
                         let btn = egui::Button::new(
                             egui::RichText::new(btn_text).strong().color(egui::Color32::WHITE),
@@ -392,11 +466,17 @@ impl eframe::App for CctApp {
                 }
                 GuiExecState::Running { progress, .. } => {
                     let p = *progress;
+                    let is_search = self.form.search;
                     ui.vertical_centered(|ui| {
                         ui.horizontal(|ui| {
                             ui.spinner();
                             ui.label(egui::RichText::new("执行中…").color(ACCENT));
                         });
+                        let progress_text = if is_search {
+                            format!("已扫描 {}，已找到 {}", p.scanned, p.modified)
+                        } else {
+                            format!("已扫描 {}，已修改 {}", p.scanned, p.modified)
+                        };
                         let ratio = if p.scanned > 0 {
                             p.modified as f32 / p.scanned as f32
                         } else {
@@ -406,7 +486,7 @@ impl eframe::App for CctApp {
                             egui::ProgressBar::new(ratio)
                                 .desired_width(320.0)
                                 .show_percentage()
-                                .text(format!("已扫描 {}，已修改 {}", p.scanned, p.modified)),
+                                .text(progress_text),
                         );
                     });
                 }
@@ -459,6 +539,11 @@ impl eframe::App for CctApp {
                     ui.separator();
                     ui.add_space(6.0);
                     self.ui_result(ui, summary);
+                }
+                GuiExecState::SearchDone(result) => {
+                    ui.separator();
+                    ui.add_space(6.0);
+                    self.ui_search_result(ui, result);
                 }
                 GuiExecState::Failed(err) => {
                     ui.separator();

@@ -20,7 +20,7 @@ pub const SUBCOMMANDS: &[SubcommandInfo] = &[
     SubcommandInfo {
         name: "text-replace-tool",
         alias: "trt",
-        description: "文本替换",
+        description: "文本替换与查找",
     },
 ];
 

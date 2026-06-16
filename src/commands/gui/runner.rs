@@ -6,7 +6,7 @@
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 
-use crate::commands::trt::{self, ProgressUpdate, RunSummary};
+use crate::commands::trt::{self, ProgressUpdate, RunSummary, SearchResult};
 use crate::error::CctError;
 
 use super::form::GuiFormState;
@@ -15,8 +15,10 @@ use super::form::GuiFormState;
 pub enum GuiMessage {
     /// 执行中进度更新。
     Progress(ProgressUpdate),
-    /// 成功完成，携带影响报告。
+    /// 替换/撤销成功完成，携带影响报告。
     Finished(RunSummary),
+    /// 查找成功完成，携带查找结果。
+    SearchFinished(SearchResult),
     /// 执行失败（含中文错误信息）。
     Error(String),
 }
@@ -43,18 +45,30 @@ pub fn start(form: &GuiFormState) -> RunHandle {
         }
     };
 
-    // 后台线程执行替换/撤销。
+    let is_search = form.search;
+
+    // 后台线程执行替换/撤销/查找。
     thread::spawn(move || {
         let progress_tx = tx.clone();
-        let result = trt::execute(&options, move |u: ProgressUpdate| {
-            // 进度发送失败（UI 已关闭）时忽略。
-            let _ = progress_tx.send(GuiMessage::Progress(u));
-        });
-        let msg = match result {
-            Ok(summary) => GuiMessage::Finished(summary),
-            Err(e) => GuiMessage::Error(describe_error(&e)),
-        };
-        let _ = tx.send(msg);
+        if is_search {
+            let result = trt::execute_search(&options, move |u: ProgressUpdate| {
+                let _ = progress_tx.send(GuiMessage::Progress(u));
+            });
+            let msg = match result {
+                Ok(search_result) => GuiMessage::SearchFinished(search_result),
+                Err(e) => GuiMessage::Error(describe_error(&e)),
+            };
+            let _ = tx.send(msg);
+        } else {
+            let result = trt::execute(&options, move |u: ProgressUpdate| {
+                let _ = progress_tx.send(GuiMessage::Progress(u));
+            });
+            let msg = match result {
+                Ok(summary) => GuiMessage::Finished(summary),
+                Err(e) => GuiMessage::Error(describe_error(&e)),
+            };
+            let _ = tx.send(msg);
+        }
     });
 
     RunHandle { receiver: rx }

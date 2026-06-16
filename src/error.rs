@@ -20,6 +20,14 @@ pub enum CctError {
     #[error("未提供任何替换规则：请使用 -o/-n 或 --rules 指定")]
     NoRulesProvided,
 
+    /// 查找模式下既未提供 `-o` 也未提供 `--rules`。
+    #[error("查找模式未提供搜索文本：请使用 -o 或 --rules 指定")]
+    NoSearchText,
+
+    /// 互斥标志同时使用。
+    #[error("{0}")]
+    MutuallyExclusiveFlags(String),
+
     /// 旧文本为空字符串（非法输入）。
     #[error("被替换文本（-o）不能为空")]
     EmptyOldText,

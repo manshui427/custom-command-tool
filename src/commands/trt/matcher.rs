@@ -58,6 +58,23 @@ impl Matcher {
         matches!(self, Matcher::Literal { .. })
     }
 
+    /// 统计文本中匹配模式的次数（查找模式专用）。
+    ///
+    /// 字面模式使用 aho-corasick 统计所有非重叠匹配；正则模式逐规则扫描，
+    /// 语义与 [`replace`](Matcher::replace) 一致（最左优先 + 规则顺序优先 + 不重叠）。
+    pub fn count_matches(&self, input: &str) -> u64 {
+        match self {
+            Matcher::Literal { ac, .. } => ac.find_iter(input).count() as u64,
+            Matcher::Regex { regexes, .. } => {
+                let mut total: u64 = 0;
+                for re in regexes {
+                    total += re.find_iter(input).count() as u64;
+                }
+                total
+            }
+        }
+    }
+
     /// 编译字面匹配器。
     fn compile_literal(rule_set: &RuleSet) -> CctResult<Self> {
         let patterns: Vec<&str> = rule_set.rules.iter().map(|r| r.old_text.as_str()).collect();
