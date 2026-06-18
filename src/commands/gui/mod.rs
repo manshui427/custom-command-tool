@@ -24,12 +24,14 @@ use app::CctApp;
 pub fn run() -> CctResult<()> {
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
-            .with_inner_size([580.0, 480.0])
-            .with_min_inner_size([420.0, 360.0]),
+            .with_inner_size([640.0, 560.0])
+            .with_min_inner_size([480.0, 400.0]),
+        // 启动时在主显示器居中，避免窗口出现在屏幕外。
+        centered: true,
         ..Default::default()
     };
     eframe::run_native(
-        "自定义工具",
+        "cct — Custom Command Tool",
         options,
         Box::new(|cc| {
             setup_chinese_fonts(&cc.egui_ctx);
